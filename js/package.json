@@ -1,0 +1,27 @@
+{
+  "name": "scuttlesort",
+  "version": "0.0.3",
+  "description": "Incremental consistent topological sort for Secure Scuttlebutt",
+  "main": "scuttlesort.js",
+  "scripts": {
+    "test": "demo.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tschudin/scuttlesort.git"
+  },
+  "keywords": [
+    "Secure Scuttlebutt",
+    "SSB",
+    "topological sort"
+  ],
+  "author": "Christian Tschudin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tschudin/scuttlesort/issues"
+  },
+  "homepage": "https://github.com/tschudin/scuttlesort#readme",
+  "dependencies": {
+    "scuttlesort": "^0.0.1"
+  }
+}
