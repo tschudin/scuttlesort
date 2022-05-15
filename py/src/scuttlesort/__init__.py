@@ -30,7 +30,7 @@ class Timeline:
     def _insert(self, pos, h):
         self.linear.insert(pos, h)
         if self.notify:
-            self.cmds.append( ('ins', pos, h.name) )
+            self.cmds.append( ('ins', h.name, pos) )
 
     def _move(self, old, new):
         h = self.linear[old]
@@ -40,32 +40,25 @@ class Timeline:
             self.cmds.append( ('mov', old, new) )
 
     def add(self, nm, after=[]):
-        print("add", nm, after)
         self.cmds = []
         SCUTTLESORT_NODE(nm, self, after)
         # optimizer: compress the stream of update commands
-        #            ins(nm,X), mov X Y, mov Y Z --> ins(nm,Z)
+        #            ins(X,nm), mov X Y, mov Y Z etc --> ins(Z,nm)
+        #            mov X Y, mov Y Z etc            --> mov X Z
         if self.notify:
-            ins = None
+            base = None
             for c in self.cmds:
-                if ins != None:
-                    if c[0] == 'mov' and ins[0] == c[1]:
-                        ins[0] = c[2]
+                if base != None:
+                    if c[0] == 'mov' and base[2] == c[1]:
+                        base[2] = c[2]
                         continue
-                    self.notify('ins', ins[0], ins[1])
-                    ins = None
-                if c[0] == 'ins':
-                    ins = list(c[1:])
-                else:
-                    self.notify(*c)
-            if ins != None:
-                self.notify('ins', ins[0], ins[1])
-        # another target could be:  mov X Y, mov Y Z -> mov X Z
-                
+                    self.notify( *base )
+                base = list(c)
+            if base != None:
+                self.notify( *base )
 
     def index(self, name): # return rank (logical time) of an event
         return self.name2p[name].indx
-        # return self.linear.index(self.name2p[name])
 
 
 class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
