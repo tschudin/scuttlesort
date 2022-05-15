@@ -40,7 +40,7 @@ class Timeline:
             self.cmds.append( ('mov', old, new) )
 
     def add(self, nm, after=[]):
-        self.cmds = []
+        self.cmds = []  # this is not reentrant: add a lock if necessary
         SCUTTLESORT_NODE(nm, self, after)
         # optimizer: compress the stream of update commands
         #            ins(X,nm), mov X Y, mov Y Z etc --> ins(Z,nm)
@@ -81,8 +81,9 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
             c = self.prev[i]
             if not c in timeline.name2p:
                 if not c in timeline.pending:
-                    timeline.pending[c] = set()
-                timeline.pending[c].add(self)
+                    timeline.pending[c] = []
+                if not self in timeline.pending[c]:
+                    timeline.pending[c].append(self)
             else:
                 p = timeline.name2p[c]
                 p.succ.append(self)
@@ -97,11 +98,12 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
         self.indx = pos
         timeline._insert(pos, self)
 
-        for p in [x for x in self.prev if type(x) != str]:
-            self.add_edge_to_the_past(timeline, p)
-        else:
-            if len(timeline.linear) > 1: # there was already at least one feed
-                self._rise(timeline)     # insert us lexicographically at time t=0
+        anchors = [x for x in self.prev if type(x) != str]
+        if len(anchors) > 0:
+            for p in anchors:
+                self.add_edge_to_the_past(timeline, p)
+        elif len(timeline.linear) > 1: # there was already at least one feed
+            self._rise(timeline)       # insert us lexicographically at time:
 
         if self.name in timeline.pending:  # our node was pending
             for e in timeline.pending[self.name]:
@@ -120,14 +122,13 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
         self._visit(cause.rank, visited)
         cause.cycl = False
 
-        si = self.indx # timeline.linear.index(self)
-        ci = cause.indx # timeline.linear.index(cause)
+        si = self.indx
+        ci = cause.indx
         if si < ci:
             self._jump(timeline, ci)
         else:
             self._rise(timeline)
 
-        # for v in sorted(visited, key=lambda x: -timeline.linear.index(x)):
         for v in sorted(visited, key=lambda x: -x.indx):
             v._rise(timeline) # bubble up towards the future
             v.vstd = False
@@ -154,7 +155,7 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
         #  before .. | e | f | g | h | ... -> future
         #
         #  after  .. | f | g | h | e | ... -> future
-        si = self.indx # timeline.linear.index(self)
+        si = self.indx
         for i in range(si+1, pos+1):
             timeline.linear[i].indx -= 1
         timeline._move(si, pos)
@@ -162,7 +163,7 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
         
     def _rise(self, timeline):
         len1 = len(timeline.linear) - 1
-        si = self.indx # timeline.linear.index(self)
+        si = self.indx
         pos = si
         while pos < len1 and self.rank > timeline.linear[pos+1].rank:
             pos += 1

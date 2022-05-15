@@ -1,0 +1,28 @@
+digraph {
+  rankdir=RL;
+  splines=true;
+  subgraph dag {
+    node[shape=Mrecord];
+    "X" [label="X\nr=0"]
+    "A" [label="A\nr=1"]
+    "A" -> "X"
+    "Y" [label="Y\nr=1"]
+    "Y" -> "X"
+    "B" [label="B\nr=2"]
+    "B" -> "A"
+    "C" [label="C\nr=2"]
+    "C" -> "A"
+    "D" [label="D\nr=3"]
+    "D" -> "B"
+    "D" -> "C"
+    "F" [label="F\nr=3"]
+    "F" -> "B"
+    "E" [label="E\nr=4"]
+    "E" -> "D"
+    "E" -> "F"
+  }
+  subgraph time {
+    node[shape=plain];
+   " t" -> " " [dir=back];
+  }
+}
