@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# scuttlesort/demo.py
+# 2022-05-12 <christian.tschudin@unibas.ch>
+
 # ----------------------------------------------------------------------
 
 if __name__ == '__main__':
@@ -34,6 +37,12 @@ if __name__ == '__main__':
    \     `--- C <-'
     \ 
      `- Y
+
+  Note that arrows show "Scuttlebutt hash pointers", not
+  the "parent before child" arrow (as is usually the case
+  in textbook descriptions of topological sort algorithms).
+  For example, event A has predecessor X and knows X'
+  hash value, hence happened afterwards, depends on X.
 ''')
 
     print("commands for creating the timeline array:")
@@ -59,8 +68,7 @@ if __name__ == '__main__':
     for n,a in g.items():
         print("  ", n, a)
 
-
-    print("\nour linearized DAG (other valid linearizations may exist):")
+    print("\nScuttlesort's timeline (other valid linearizations may exist):")
     print(" ", [nm for nm in timeline])
     print("  note the lexicographic order within the same rank")
 
@@ -99,7 +107,17 @@ commands for creating the timeline array:
   adding C
      ins 'C' at 4
 
-our linearized DAG (other valid linearizations may exist):
+dependency graph was, in input order:
+   X []
+   A ['X']
+   D ['B', 'C']
+   E ['D', 'F']
+   F ['B']
+   B ['A']
+   Y ['X']
+   C ['A']
+
+Scuttlesort's timeline (other valid linearizations may exist):
   ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
   note the lexicographic order within the same rank
 
