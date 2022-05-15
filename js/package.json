@@ -1,7 +1,7 @@
 {
   "name": "scuttlesort",
-  "version": "0.0.3",
-  "description": "Incremental consistent topological sort for Secure Scuttlebutt",
+  "version": "0.0.7",
+  "description": "ScuttleSort - incremental convergent topological sort for Secure Scuttlebutt",
   "main": "scuttlesort.js",
   "scripts": {
     "test": "demo.js"
@@ -22,6 +22,6 @@
   },
   "homepage": "https://github.com/tschudin/scuttlesort#readme",
   "dependencies": {
-    "scuttlesort": "^0.0.1"
+    "scuttlesort": "^0.0.7"
   }
 }

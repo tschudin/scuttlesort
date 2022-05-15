@@ -19,13 +19,16 @@ let g = {
     'C': ['A']
 };
 
-let timeline = new Timeline( (x) => { console.log(x); } );
+let timeline = new Timeline( (x) => { console.log(" ", x); } );
 
-for (let n in g)
+for (let n in g) {
+    console.log("adding", n);
     timeline.add(n, g[n]);
+}
 
+console.log("\nResulting timeline: (pos, name, rank, successors)")
 for (let e of timeline.linear)
-    console.log(e.indx, e.name, e.rank,
+    console.log(" ", e.indx, e.name, e.rank,
                 e.succ.map( x => {return x.name;} ) );
 
 
@@ -41,49 +44,48 @@ for (let e of timeline.linear)
     \ 
      `- Y
 
-  after sort, we get: {X}{A}{B,C}{D,F}{E,Y}, or
-                      {X}{A,Y}{B,C}{D,F}{E}, etc
+  Note that arrows show "Scuttlebutt hash pointers", not
+  the "parent before child" arrow (as is usually the case
+  in textbook descriptions of topological sort algorithms).
+  For example, event A has predecessor X and knows X'
+  hash value, hence happened afterwards, depends on X.
 
-  from Python run:
+  after sort, we get: {X}{A,Y}{B,C}{D,F}{E} (ScuttleSort)
+                      {X}{A}{B,C}{D,F}{E,Y} (one among more linearizations)
+                       
 
-commands for creating the timeline array:
-  ins 'X' at 0
-  ins 'A' at 1
-  ins 'D' at 0
-  ins 'E' at 3
-  ins 'F' at 1
-  ins 'B' at 5
-  mov  0  to 5
-  mov  3  to 5
-  mov  0  to 3
-  mov  3  to 4
-  ins 'Y' at 2
-  ins 'C' at 4
+Expected output:
 
-linearized DAG:
-  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
-  note the lexicographic order within the same rank
+adding X
+  [ 'ins', 'X', 0 ]
+adding A
+  [ 'ins', 'A', 1 ]
+adding D
+  [ 'ins', 'D', 0 ]
+adding E
+  [ 'ins', 'E', 3 ]
+adding F
+  [ 'ins', 'F', 1 ]
+adding B
+  [ 'ins', 'B', 5 ]
+  [ 'mov', 0, 5 ]
+  [ 'mov', 3, 5 ]
+  [ 'mov', 0, 4 ]
+adding Y
+  [ 'ins', 'Y', 2 ]
+adding C
+  [ 'ins', 'C', 4 ]
 
-input dependency graph was:
-  X []
-  A ['X']
-  Y ['X']
-  B ['A']
-  C ['A']
-  D ['B', 'C']
-  F ['B']
-  E ['D', 'F']
+Resulting timeline: (pos, name, rank, successors)
+  0 X 0 [ 'A', 'Y' ]
+  1 A 1 [ 'B', 'C' ]
+  2 Y 1 []
+  3 B 2 [ 'D', 'F' ]
+  4 C 2 [ 'D' ]
+  5 D 3 [ 'E' ]
+  6 F 3 [ 'E' ]
+  7 E 4 []
 
-name  rank  successor(s)
-   X     0  ['A', 'Y']
-   A     1  ['B', 'C']
-   Y     1  []
-   B     2  ['D', 'F']
-   C     2  ['D']
-   D     3  ['E']
-   F     3  ['E']
-   E     4  []
-
-*/
+ */
 
 // eof

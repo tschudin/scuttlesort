@@ -1,4 +1,4 @@
-# ScuttleSort -- Incremental Convergent Topological Sort for Secure Scuttlebutt(SSB)
+# ScuttleSort -- Incremental Convergent Topological Sort for Secure Scuttlebutt (SSB)
 
 ## Synopsis
 

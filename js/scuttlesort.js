@@ -19,7 +19,7 @@ class Timeline {
     _insert(pos, h) {
         this.linear.splice(pos, 0, h);
         if (this.notify)
-            this.cmds.push( ['ins', pos, h.name] );
+            this.cmds.push( ['ins', h.name, pos] );
     }
 
     _move(from, to) {
@@ -31,30 +31,26 @@ class Timeline {
     }
 
     add(nm, after) {
-        this.cmds = []; // FIXME: this is not reentrant, should lock obj
+        this.cmds = []; // this is not reentrant: add a lock if necessary
         let n = new ScuttleSortNode(nm, this, after);
         // optimizer: compress the stream of update commands
-        //            ins(nm,X), mov X Y, mov Y Z --> ins(nm,Z)
+        //            ins(X,nm), mov X Y, mov Y Z etc --> ins(Z,nm)
+        //            mov X Y, mov Y Z etc            --> mov X Z
         if (this.notify) {
-            var ins = null;
+            var base = null;
             for (let c of this.cmds) {
-                if (ins) {
-                    if (c[0] == 'mov' && ins[0] == c[1]) {
-                        ins[0] = c[2];
+                if (base) {
+                    if (c[0] == 'mov' && base[2] == c[1]) {
+                        base[2] = c[2];
                         continue;
                     }
-                    this.notify( ['ins', ins[0], ins[1]] );
-                    ins = null;
+                    this.notify( base );
                 }
-                if (c[0] == 'ins')
-                    ins = [c[1], c[2]];
-                else
-                    this.notify(c)
+                base = c;
             }
-            if (ins)
-                this.notify( ['ins', ins[0], ins[1]] );
+            if (base)
+                this.notify( base );
         }
-        // another optimization target could be:  mov X Y, mov Y Z -> mov X Z
     }
 
     index(nm) {
@@ -85,8 +81,10 @@ class ScuttleSortNode {
                 this.prev[i] = p; // replace str/bytes by respective node
             } else {
                 if (!timeline.pending[c])
-                    timeline.pending[c] = new Set();
-                timeline.pending[c].add(this)
+                    timeline.pending[c] = [];
+                let a = timeline.pending[c];
+                if (!a.includes(this))
+                    a.splice(a.length, 0, this);
             }
         }
 
@@ -135,7 +133,7 @@ class ScuttleSortNode {
         // insert causality edge (self-to-cause) into topologically sorted graph
         let visited = new Set();
         cause.cycl = true;
-        this._visit2(cause.rank, visited)
+        this._visit(cause.rank, visited)
         cause.cycl = false;
 
         let si = this.indx;
@@ -153,7 +151,7 @@ class ScuttleSortNode {
         }
     }
 
-    _visit2(rnk, visited) { // "affected" wave towards the future
+    _visit(rnk, visited) { // "affected" wave towards the future
         let out = [[this]];
         while (out.length > 0) {
             let o = out[out.length - 1];
@@ -164,8 +162,8 @@ class ScuttleSortNode {
             let c = o.pop();
             c.vstd = true;
             visited.add(c);
-            // if c.cycl:
-            //     raise Exception('cycle')
+            if (c.cycl)
+                throw new Error('cycle');
             if (c.rank <= (rnk + out.length - 1)) {
                 c.rank = rnk + out.length;
                 out.push(Array.from(c.succ));
@@ -179,7 +177,7 @@ class ScuttleSortNode {
         //  before .. | e | f | g | h | ... -> future
         //
         //  after  .. | f | g | h | e | ... -> future
-        let si = this.indx // timeline.linear.index(self)
+        let si = this.indx
         for (let i = si+1; i < pos+1; i++)
             timeline.linear[i].indx -= 1;
         timeline._move(si, pos);
@@ -188,7 +186,7 @@ class ScuttleSortNode {
 
     _rise(timeline) {
         let len1 = timeline.linear.length - 1;
-        let si = this.indx; // timeline.linear.index(self)
+        let si = this.indx;
         var pos = si
         while (pos < len1 && this.rank > timeline.linear[pos+1].rank)
             pos += 1;
