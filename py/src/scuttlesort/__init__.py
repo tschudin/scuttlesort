@@ -69,8 +69,8 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
         self.name = name
         self.prev = [x for x in after] # copy of the causes we depend on
                     # hack alert: these are str/bytes, will be replaced by nodes
-        # internal fields for insertion algorithm:
-        self.cycl = False   # cycle detection, could be removed for SSB
+        # internal fields of sorting algorithm:
+        self.cycl = False   # cycle detection (could be removed for SSB)
         self.succ = []      # my future successors (="outgoing")
         self.vstd = False   # visited
         self.rank = 0       # 0 for a start, we will soon know better
@@ -117,7 +117,7 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
         # insert causality edge (self-to-cause) into topologically sorted graph
         visited = set()
         cause.cycl = True
-        self._visit2(cause.rank, visited)
+        self._visit(cause.rank, visited)
         cause.cycl = False
 
         si = self.indx # timeline.linear.index(self)
@@ -133,16 +133,6 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
             v.vstd = False
 
     def _visit(self, rnk, visited): # "affected" wave towards the future
-        self.vstd = True
-        visited.add(self)
-        # if self.cycl:
-        #     raise Exception('cycle')
-        if self.rank <= rnk:
-            self.rank = rnk + 1
-            for effect in self.succ: # those referencing us from the future
-                effect._visit(self.rank, visited)
-
-    def _visit2(self, rnk, visited): # "affected" wave towards the future
         out = [[self]]
         while len(out) > 0:
             o = out[-1]
@@ -152,8 +142,8 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
             c = o.pop()
             c.vstd = True
             visited.add(c)
-            # if c.cycl:
-            #     raise Exception('cycle')
+            if c.cycl:
+                raise Exception('cycle')
             if c.rank <= rnk + len(out) - 1:
                 c.rank = rnk + len(out)
                 out.append([x for x in c.succ])
