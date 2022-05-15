@@ -12,6 +12,4 @@ having seen the same set of log entries, regardless of the order in
 which they process a new log entry as long as it follows the
 append-order.
 
-
-## Notes on the Python Implementation
-
+## Note on the JavaScript Implementation

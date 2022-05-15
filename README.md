@@ -1,8 +1,10 @@
-# ScuttleSort
-Incremental Consistent Topological Sort for Append-only Logs
+# ScuttleSort -- Incremental Convergent Topological Sort for Append-only Logs
 
-two implementations:
+Two implementations:
 - [Python](./py)
 - [JavaScript](./js)
+
+Technical Report:
+- ...
 
 ---
