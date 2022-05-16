@@ -4,7 +4,7 @@ Two implementations:
 - [Python](./py)
 - [JavaScript](./js)
 
-Technical Report:
-- ...
+A technical Report:
+- see the PDF file in [this directory](./doc)
 
 ---
