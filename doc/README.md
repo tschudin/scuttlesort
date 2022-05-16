@@ -672,7 +672,8 @@ eventual consistency requirement and the underlying Least Upper Bound
 property of the partial order). Intuitively, the "lowest energy
 level"-strategy in the ```_rise()``` function seems suitable for such
 an assessment. The internal machinery auf Automerge [KLE2017] could be
-a good starting point.
+a good starting point as well as the DSON paper [RIN2022] where "dots"
+correspond quite literally to log entries.
 
 
 
@@ -723,6 +724,10 @@ Distributed Systems, vol. 28, no. 10, pp. 2733-2746, Oct 2017, doi:
 sort algorithm for directed acyclic graphs. ACM Journal of
 Experimental Algorithmics, Vol 11,2006,
 https://doi.org/10.1145/1187436.1210590
+
+[RIN2022] Arik Rinberg, Tomer Solomon, Roee Shlomo, Guy Khazma, Gal Lushi, Idit
+Keidar, and Paula Ta-Shma. DSON: JSON CRDT Using Delta-Mutations For
+Document Stores. PVLDB 2022, https://www.vldb.org/pvldb/vol15/p1053-rinberg.pdf
 
 [SIG2016] Ragnar Lárus Sigurðsson: Practical performance of
 incremental topological sorting and cycle detection algorithms, 2016
