@@ -11,18 +11,18 @@ const Timeline = require("scuttlesort")
 let g = {
     'X': [],
     'A': ['X'],
-    'D': ['B', 'C'],
-    'E': ['D', 'F'],
     'F': ['B'],
+    'E': ['D', 'F'],
     'B': ['A'],
     'Y': ['X'],
+    'D': ['B', 'C'],
     'C': ['A']
 };
 
 let timeline = new Timeline( (x) => { console.log(" ", x); } );
 
 for (let n in g) {
-    console.log("adding", n);
+    console.log("// when adding", n);
     timeline.add(n, g[n]);
 }
 
@@ -56,31 +56,30 @@ for (let e of timeline.linear)
 
 Expected output:
 
-adding X
+// when adding X
   [ 'ins', 'X', 0 ]
-adding A
+// when adding A
   [ 'ins', 'A', 1 ]
-adding D
-  [ 'ins', 'D', 0 ]
-adding E
+// when adding F
+  [ 'ins', 'F', 0 ]
+// when adding E
   [ 'ins', 'E', 3 ]
-adding F
-  [ 'ins', 'F', 1 ]
-adding B
-  [ 'ins', 'B', 5 ]
-  [ 'mov', 0, 5 ]
-  [ 'mov', 3, 5 ]
+// when adding B
+  [ 'ins', 'B', 4 ]
   [ 'mov', 0, 4 ]
-adding Y
+  [ 'mov', 2, 4 ]
+// when adding Y
   [ 'ins', 'Y', 2 ]
-adding C
+// when adding D
+  [ 'ins', 'D', 4 ]
+// when adding C
   [ 'ins', 'C', 4 ]
 
 Resulting timeline: (pos, name, rank, successors)
   0 X 0 [ 'A', 'Y' ]
   1 A 1 [ 'B', 'C' ]
   2 Y 1 []
-  3 B 2 [ 'D', 'F' ]
+  3 B 2 [ 'F', 'D' ]
   4 C 2 [ 'D' ]
   5 D 3 [ 'E' ]
   6 F 3 [ 'E' ]
