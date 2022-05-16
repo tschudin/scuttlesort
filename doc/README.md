@@ -671,7 +671,8 @@ to diverge the outcome from the single possible result (= strong
 eventual consistency requirement and the underlying Least Upper Bound
 property of the partial order). Intuitively, the "lowest energy
 level"-strategy in the ```_rise()``` function seems suitable for such
-an assessment.
+an assessment. The internal machinery auf Automerge [KLE2017] could be
+a good starting point.
 
 
 
@@ -712,6 +713,11 @@ instructions per new event.
 \vfill
 
 ## Bibliography
+
+[KLE2017] Martin Kleppmann and Alastair R. Beresford: A Conflict-Free
+Replicated JSON Datatype, in IEEE Transactions on Parallel and
+Distributed Systems, vol. 28, no. 10, pp. 2733-2746, Oct 2017, doi:
+10.1109/TPDS.2017.2697382 and https://arxiv.org/pdf/1608.03960.pdf
 
 [PEA2006] David J. Pearce and Paul H. J. Kelly: A dynamic topological
 sort algorithm for directed acyclic graphs. ACM Journal of
