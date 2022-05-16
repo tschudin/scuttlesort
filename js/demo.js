@@ -1,4 +1,4 @@
-// 
+#!/usr/bin/env node
 
 // scuttlesort/demo.js
 // 2022-05-14 <christian.tschudin@unibas.ch
@@ -31,6 +31,45 @@ for (let e of timeline.linear)
     console.log(" ", e.indx, e.name, e.rank,
                 e.succ.map( x => {return x.name;} ) );
 
+
+let chains = [
+    [ ['F',['B']], ['E',['D','F']] ],
+    [ ['X',[]], ['A',['X']], ['B',['A']], ['D',['B','C']] ],
+    [ ['C',['A']] ],
+    [ ['Y',['X']] ]
+];
+
+function interleave(pfx, config, lst) {
+    var empty = true;
+    for (let i=0; i < config.length; i++) {
+        if (config[i].length > 0) {
+            let config2 = JSON.parse(JSON.stringify(config));
+            let e = config2[i].shift();
+            interleave(pfx + e[0], config2, lst);
+            empty = false;
+        }
+    }
+    if (empty) {
+        lst.push(pfx);
+        return;
+    }
+}
+
+var lst = [];
+interleave('', chains, lst);
+
+console.log("\nRunning ScuttleSort for all", lst.length,
+            "possible ingestion schedules:\n");
+console.log("  ingest");
+console.log("   order   resulting (total) ScuttleSort order");
+console.log("--------   -----------------------------------")
+for (let pfx of lst) {
+    let tl2 = new Timeline();
+    for (let nm of pfx) {
+        tl2.add(nm, g[nm]);
+    }
+    console.log(pfx, " ", JSON.stringify(tl2.linear.map( x => {return x.name;} )))
+}
 
 /*
 
@@ -84,6 +123,19 @@ Resulting timeline: (pos, name, rank, successors)
   5 D 3 [ 'E' ]
   6 F 3 [ 'E' ]
   7 E 4 []
+
+Running ScuttleSort for all 840 possible ingestion schedules:
+
+  ingest
+   order   resulting (total) ScuttleSort order
+--------   -----------------------------------
+FEXABDCY   ["X","A","Y","B","C","D","F","E"]
+FEXABDYC   ["X","A","Y","B","C","D","F","E"]
+FEXABCDY   ["X","A","Y","B","C","D","F","E"]
+FEXABCYD   ["X","A","Y","B","C","D","F","E"]
+FEXABYDC   ["X","A","Y","B","C","D","F","E"]
+FEXABYCD   ["X","A","Y","B","C","D","F","E"]
+...
 
  */
 
