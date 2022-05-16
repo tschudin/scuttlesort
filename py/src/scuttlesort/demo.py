@@ -8,6 +8,7 @@
 if __name__ == '__main__':
 
     from scuttlesort import Timeline
+    import copy
     import os
 
     def to_dot(timeline): # generator for graphviz
@@ -58,7 +59,8 @@ if __name__ == '__main__':
           'B': ['A'],
           'Y': ['X'],
           'D': ['B', 'C'],
-          'C': ['A'] }
+          'C': ['A']
+    }
 
     for n,a in g.items():
         print("  adding", n)
@@ -83,6 +85,40 @@ if __name__ == '__main__':
         print("\ngeneration of graphviz files: see dag.dot, dag.pdf")
     except:
         pass
+
+
+    chains = [
+        [ ('F',['B']), ('E',['D','F']) ],
+        [ ('X',[]), ('A',['X']), ('B',['A']), ('D',['B','C']) ],
+        [ ('C',['A']) ],
+        [ ('Y',['X']) ]
+    ]
+
+    def interleave(pfx, config, lst):
+        if len([x for x in config if len(x) > 0]) == 0:
+            lst.append(pfx)
+            return
+        for i in range(len(config)):
+            if len(config[i]) > 0:
+                config2 = copy.deepcopy(config)
+                e = config2[i][0]
+                del config2[i][0]
+                interleave(pfx + e[0], config2, lst)
+    lst = []
+    interleave('', chains, lst)
+
+    print("\nRunning ScuttleSort for all", len(lst),
+          "possible ingestion schedules:\n")
+
+    print("  ingest")
+    print("   order  resulting (total) ScuttleSort order")
+    print("--------  ----------------------------------------")
+    for pfx in lst:
+        tl = Timeline()
+        for nm in pfx:
+            tl.add(nm, g[nm])
+        print(f"{pfx}  {[x.name for x in tl.linear]}")
+
     
 ''' Output for ScuttleSort:
 
@@ -91,30 +127,29 @@ commands for creating the timeline array:
      ins 'X' at 0
   adding A
      ins 'A' at 1
-  adding D
-     ins 'D' at 0
+  adding F
+     ins 'F' at 0
   adding E
      ins 'E' at 3
-  adding F
-     ins 'F' at 1
   adding B
-     ins 'B' at 5
-     mov  1  to 5
-     mov  3  to 5
-     mov  0  to 3
+     ins 'B' at 4
+     mov  0  to 4
+     mov  2  to 4
   adding Y
      ins 'Y' at 2
+  adding D
+     ins 'D' at 4
   adding C
      ins 'C' at 4
 
 dependency graph was, in input order:
    X []
    A ['X']
-   D ['B', 'C']
-   E ['D', 'F']
    F ['B']
+   E ['D', 'F']
    B ['A']
    Y ['X']
+   D ['B', 'C']
    C ['A']
 
 Scuttlesort's timeline (other valid linearizations may exist):
@@ -130,6 +165,20 @@ name  rank  successor(s)
    D     3  ['E']
    F     3  ['E']
    E     4  []
+
+Running ScuttleSort for all 840 possible ingestion schedules:
+
+  ingest
+   order  resulting (total) ScuttleSort order
+--------  ----------------------------------------
+FEXABDCY  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABDYC  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABCDY  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABCYD  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABYDC  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABYCD  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+...
+
 '''
 
 # eof

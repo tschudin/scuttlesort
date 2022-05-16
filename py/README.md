@@ -1,17 +1,246 @@
-# ScuttleSort -- Incremental Convergent Topological Sort for Secure Scuttlebutt(SSB)
+# ScuttleSort -- Incremental Convergent Topological Sort for Secure Scuttlebutt (SSB)
 
 ## Synopsis
 
-ScuttleSort converts SSB's tangled append-only logs into a single
+ScuttleSort transforms SSB's tangled append-only logs into a single
 linear sequence. Because this sequence changes as new log entries are
 incrementally added, an append-only stream of instructions ('insert'
 and 'move' commands) is derived as a side effect that permits to
 replicate and update copies of the sequence. ScuttleSort is convergent
 which means that the resulting sequence is the same for all receivers
 having seen the same set of log entries, regardless of the order in
-which they process a new log entry as long as it follows the
-append-order.
+which they process a new log entry as long as it is added in log order.
 
 
-## Notes on the Python Implementation
+## ScuttleSort Demo
 
+SSB's append-only logs are implemented by hash chains where each
+entry in a log has a unique ID. Basically, a log entry is four-tuple
+and its ID is some hash value computed over the entry's binary
+representation:
+
+```
+log_entry = (author, prev, payload, signature);
+id_of_log_entry = hash(log_entry);
+```
+
+where
+- ```author``` is some public key, used to validate the signature
+- ```prev``` is the ID of the predecessor log entry
+- ```payload``` is the content of the log entry
+- ```signature``` bytes to verify the authenticty and integrity of (the encoding of) all above fields
+
+The first entry in the chain has an empty ```prev``` field. Because of
+the randomness of the author key, this entry is unique, and so is its
+ID, and so are the subsequent entries in the chain and their IDs. Each
+author only appends to their own chain, and receives unchanged copies
+of the others' logs.
+
+```
+ 1st entry      2nd entry    3rd entry                 In Secure Scuttlebutt,
+ .------.       .----.       .----.                    each append-only log
+ |AUTH  |       |AUTH|       |AUTH|                    is implemented as an
+ |PREV=0|    .--|PREV|    .--|PREV    ...              independend hash chain.
+ |PAYL  |    |  |PAYL|    |  |                         Only the author can
+ |SIGN  |    |  |SIGN|    |  |                         write to their chain.
+ `------'    |  '----'    |  `---
+   hash|     |  hash|     |
+       v     |      v     |
+    ID_0 ----'   ID_1 ----'    ID_2
+
+
+    e0    <----   e1    <----   e2   <----   e3   ... chained log entries
+```
+
+In the demo we assume that four append-only logs (see figure below)
+are involved in some joint activity where their owners need clarity
+about which log entry was appended before another one. The logs only
+define a partial order, namely within the log itself and in form of
+cross-referenced IDs of other entries (that are carried in the
+payloads). The desired "total order" cannot be determined in general,
+as some event can be logically independent i.e.,
+concurrent. ScuttleSort nevertheless provides such a total order
+thanks to a convention how to derive the global order, and based on the
+causality relationship of events.
+
+Other total orders will exist, but ScuttleSort's aim is to construct
+one that has strong eventual consistency, meaning that all observers
+seeing all logs will all compute the same total order that is not
+dependend on the sequence in which log entries are ingested (as long
+as they are ingested as chained).
+
+As an example, consider the following scenario with four append-only
+logs (in form of hash chains) and eight highlighted entries
+
+```
+  chain 1   ...............     .-- F <-- E  ....
+                               /         /
+  chain 2   ...   X <-- A <-- B <-- D <-'   .....
+                  ^     ^          /
+  chain 3   ...    \     `--- C <-'   ...........
+                    \ 
+  chain 4   .....    `- Y  ......................
+
+                                               ---> time
+```
+
+Causality is shown as arrows from effect to cause i.e., dependency. In
+the example above, A depends on X as A was appended later to the chain
+than X (and needed to know entry X's ID). We also say that "A points
+to X" via its ```prev``` field, for example, and "D points to B" via
+its ```prev``` field and contains another hash value (in its payload)
+that points to C.
+
+ScuttleSort has bascially one method:
+```
+add(name, after_list)
+```
+
+which adds edges to the dependency graph between a node with ID
+```name``` and the names in the ```after_list``` which are hash values
+of past events in other chains.
+
+The total order is called a ```Timeline```. On creation of a Timeline
+object, one can parametrize it with a callback. In these callbacks,
+```insert``` and ```move``` commands are conveyed which permit to
+(re-) construct the sorted array with all events added so far.
+
+If the entries are added in the following sequence
+
+```
+g = {
+    'X': [],
+    'A': ['X'],
+    'F': ['B'],
+    'E': ['D', 'F'],
+    'B': ['A'],
+    'Y': ['X'],
+    'D': ['B', 'C'],
+    'C': ['A']
+};
+```
+
+then the stream of instructions as generated by ScuttleSort looks like this:
+
+```
+  adding X
+     ins 'X' at 0
+  adding A
+     ins 'A' at 1
+  adding F
+     ins 'F' at 0
+  adding E
+     ins 'E' at 3
+  adding B
+     ins 'B' at 4
+     mov  0  to 4
+     mov  2  to 4
+  adding Y
+     ins 'Y' at 2
+  adding D
+     ins 'D' at 4
+  adding C
+     ins 'C' at 4
+```
+
+which corresponds to the array and sequence ```[X, A, Y, B, C, D, F, E]```.
+
+
+## Python Implementation
+
+The full demo code is given below. It also includes a generator
+for all possible ingestion schedules. The demo then exhaustively
+invokes ScuttleSort for all schedules and each time produces
+the same result, as required for strong eventual consistency:
+
+```
+  ingest
+   order  resulting (total) ScuttleSort order
+--------  ----------------------------------------
+FEXABDCY  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABDYC  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABCDY  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABCYD  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABYDC  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+FEXABYCD  ['X', 'A', 'Y', 'B', 'C', 'D', 'F', 'E']
+...
+```
+
+## Appendix: Demo Code
+
+```
+#!/usr/bin/env python3
+
+# scuttlesort/demo.py
+# 2022-05-12 <christian.tschudin@unibas.ch>
+
+# ----------------------------------------------------------------------
+
+if __name__ == '__main__':
+
+    from scuttlesort import Timeline
+    import copy
+    import os
+
+    notify = lambda a,b,c: \
+             print("    ", a, f"'{b}' at {c}" if a=='ins' else f" {b}  to {c}")
+
+    timeline = Timeline(notify)   # for scuttlesort
+
+    g = { 'X': [],
+          'A': ['X'],
+          'F': ['B'],
+          'E': ['D', 'F'],
+          'B': ['A'],
+          'Y': ['X'],
+          'D': ['B', 'C'],
+          'C': ['A']
+    }
+
+    for n,a in g.items():
+        print("  adding", n)
+        timeline.add(n, a)
+
+    print("\nScuttlesort's timeline (other valid linearizations may exist):")
+    print(" ", [nm for nm in timeline])
+    print("  note the lexicographic order within the same rank")
+
+    print("\nname  rank  successor(s)")
+    for h in timeline.linear:
+        print("  ", h.name, ("%5d " % h.rank), [x.name for x in h.succ])
+
+
+    chains = [
+        [ ('F',['B']), ('E',['D','F']) ],
+        [ ('X',[]), ('A',['X']), ('B',['A']), ('D',['B','C']) ],
+        [ ('C',['A']) ],
+        [ ('Y',['X']) ]
+    ]
+
+    def interleave(pfx, config, lst):
+        if len([x for x in config if len(x) > 0]) == 0:
+            lst.append(pfx)
+            return
+        for i in range(len(config)):
+            if len(config[i]) > 0:
+                config2 = copy.deepcopy(config)
+                e = config2[i][0]
+                del config2[i][0]
+                interleave(pfx + e[0], config2, lst)
+    lst = []
+    interleave('', chains, lst)
+
+    print("\nRunning ScuttleSort for all", len(lst),
+          "possible ingestion schedules:\n")
+
+    print("  ingest")
+    print("   order  resulting (total) ScuttleSort order")
+    print("--------  ----------------------------------------")
+    for pfx in lst:
+        tl = Timeline()
+        for nm in pfx:
+            tl.add(nm, g[nm])
+        print(f"{pfx}  {[x.name for x in tl.linear]}")
+
+# eof
+```
