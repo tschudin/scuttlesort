@@ -12,6 +12,7 @@ class Timeline:
         self.pending = {}  # cause_name ~ [effect_name]
         self.notify = update_callback
         self.cmds = []
+        self.tips = set()
 
     def __len__(self):
         return len(self.linear)
@@ -39,9 +40,12 @@ class Timeline:
         if self.notify:
             self.cmds.append( ('mov', old, new) )
 
+    def set_notify(self, update_callback=None):
+        self.notify = update_callback
+
     def add(self, nm, after=[]):
         self.cmds = []  # this is not reentrant: add a lock if necessary
-        SCUTTLESORT_NODE(nm, self, after)
+        n = SCUTTLESORT_NODE(nm, self, after)
         # optimizer: compress the stream of update commands
         #            ins(X,nm), mov X Y, mov Y Z etc --> ins(Z,nm)
         #            mov X Y, mov Y Z etc            --> mov X Z
@@ -56,9 +60,35 @@ class Timeline:
                 base = list(c)
             if base != None:
                 self.notify( *base )
+        return n
+
 
     def index(self, name): # return rank (logical time) of an event
         return self.name2p[name].indx
+
+    def is_concurrent(self, nm_a, nm_b):
+        pa, pb = self.name2p[nm_a], self.name2p[nm_b]
+        if pa == pb: return False
+        if pa.rank == pb.rank: return True
+        if pa.indx > pb.indx:
+            pa, pb = pb, pa
+        visited = set()
+        pending = set()
+        pending.add(pa)
+        while len(pending) > 0:
+            x = pending.pop()
+            if x == pb:
+                return False
+            visited.add(x)
+            if x.rank > pb.rank:
+                continue
+            for s in x.succ:
+                if not s in visited:
+                    pending.add(s)
+        return True
+
+    def get_tips(self):
+        return [x.name for x in self.tips]
 
 
 class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
@@ -67,7 +97,7 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
         if name in timeline.name2p: # can add a name only once, must be unique
             raise KeyError
         self.name = name
-        self.prev = [x for x in after] # copy of the causes we depend on
+        self.prev = [x for x in after if x != name] # copy the dependencies
                     # hack alert: these are str/bytes, will be replaced by nodes
         # internal fields of sorting algorithm:
         self.cycl = False   # cycle detection (could be removed for SSB)
@@ -87,18 +117,20 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
             else:
                 p = timeline.name2p[c]
                 p.succ.append(self)
+                if p in timeline.tips:
+                    timeline.tips.remove(p)
                 self.prev[i] = p # replace str/bytes by respective node
 
         pos = 0
         for p in self.prev:
-            if type(p) != str and p.indx > pos:
+            if isinstance(p, SCUTTLESORT_NODE) and p.indx > pos:
                 pos = p.indx
         for i in range(pos, len(timeline.linear)):
             timeline.linear[i].indx += 1
         self.indx = pos
         timeline._insert(pos, self)
 
-        anchors = [x for x in self.prev if type(x) != str]
+        anchors = [x for x in self.prev if isinstance(x, SCUTTLESORT_NODE)]
         if len(anchors) > 0:
             for p in anchors:
                 self.add_edge_to_the_past(timeline, p)
@@ -110,8 +142,13 @@ class SCUTTLESORT_NODE: # push updates towards the future, "genesis" has rank 0
                 for c in [x for x in e.prev if x == self.name]:
                     e.add_edge_to_the_past(timeline, self)
                     self.succ.append(e)
+                    if self in timeline.tips:
+                        timeline.tips.remove(self)
                     e.prev[e.prev.index(c)] = self # replace str/bytes
             del timeline.pending[self.name]
+
+        if len(self.succ) == 0:
+            timeline.tips.add(self)
 
         # FIXME: we should undo the changes in case of a cycle ...
 
