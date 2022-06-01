@@ -66,11 +66,17 @@ if __name__ == '__main__':
         print("  adding", n)
         timeline.add(n, a)
 
-    print("\ndependency graph was, in input order:")
+    print("\ndependency graph, in input order:")
     for n,a in g.items():
         print("  ", n, a)
 
-    print("\nScuttlesort's timeline (other valid linearizations may exist):")
+    print("\ntesting is_concurrent():")
+    pairs = [('C','B'), ('C','F'), ('C','D'), ('C','E'),
+             ('Y','X'), ('Y','A'), ('Y','C'), ('Y','E')]
+    for p in pairs:
+        print(" ", p, f"concurrent={timeline.is_concurrent(*p)}")
+
+    print("\nScuttleSort's timeline (other valid linearizations may exist):")
     print(" ", [nm for nm in timeline])
     print("  note the lexicographic order within the same rank")
 
