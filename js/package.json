@@ -22,6 +22,5 @@
   },
   "homepage": "https://github.com/tschudin/scuttlesort/blob/main/js/README.md",
   "dependencies": {
-    "scuttlesort": "^0.0.7"
   }
 }
